@@ -1,7 +1,9 @@
+<img align="left" src="/img/dalek2.jpg">
 # calibrator
 
 Calibrator is a small c++ command line tool to calibrate 14C dates. In can process inputs in csv, json or as cli parameters, and it outputs csv or json, that can be piped into a file.
 
+## Usage
 ```
 Allowed arguments:
   -h [ --help ]               Produce this help message.
