@@ -16,3 +16,7 @@ Allowed arguments:
   --sum                       calculate sum probability.
   -o [ --output ] arg (=json) csv for csv-output, json for json (default).
 ```
+
+## Documentation
+
+See [doxygen docu](https://martinhinz.github.io/calibrator/).
