@@ -32,7 +32,7 @@ class UncalDateList{
 		UncalDateList();
 		vector<UncalDate> get_dates();
 		void push_back(UncalDate date);
-		CalDateList calibrate(CalCurve calcurve);
+		CalDateList calibrate(CalCurve &calcurve);
 	private:
 		vector<UncalDate> _dates;
 };

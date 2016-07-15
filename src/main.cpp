@@ -36,7 +36,7 @@ using namespace boost::program_options;
   * 
   * This method checks if a string contains numbers only.
   */
-int validate_numeric_string ( string a )
+int validate_numeric_string ( string &a )
 {
   unsigned i;
   for ( i = 0; i < a.size(); i++ )
@@ -52,7 +52,7 @@ int validate_numeric_string ( string a )
   * 
   * This method tries to estimate whether a string is json or csv.
   */
-int check_input_format(string input_string) {
+int check_input_format(string &input_string) {
   if( !input_string.empty() ) {
     char first_char = input_string[0];
     if (first_char == '{' || first_char == '['){
@@ -71,7 +71,7 @@ int check_input_format(string input_string) {
   * 
   * This method converts a csv string into a json object.
   */
-json csv_input_to_json(string in) {
+json csv_input_to_json(string &in) {
     bool err = false;
     json return_value;
     unsigned head_length = 0;

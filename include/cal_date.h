@@ -24,6 +24,7 @@
 #include <iostream>
 #include <vector>
 #include "json.hpp"
+#include <random>
 
 using json = nlohmann::json;
 
@@ -35,13 +36,13 @@ class CalDate{
       CalDate(string name, vector<double> probabilities, vector<int> bp, int uncal_bp, int uncal_error);
       CalDate();
    	void info()const;
-   	json to_json();
-   	string get_name();
+   		json to_json();
+   		string get_name();
 		void calculate_sigma_ranges();
 		vector<SigmaRange> get_sigma_ranges();
 		vector<int> get_full_bp();
 		vector<double> get_full_probabilities();
-    string to_csv();
+		string to_csv();
 	private:
 		string _name;
 		int _uncal_bp;
@@ -54,7 +55,7 @@ class CalDate{
 		json bp_to_json();
 		vector<SigmaRange> _sigma_ranges;
 		double LinearInterpolate(double y1, double y2, double mu);
-		vector<int> sigma_range_helper(double prob);
+		vector<int> sigma_range_helper(double &prob);
 		json sigma_ranges_to_json() ;
 };
 

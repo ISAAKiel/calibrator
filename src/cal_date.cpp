@@ -68,7 +68,7 @@ void CalDate::calculate_sigma_ranges() {
 		double this_sigma = arr[t];
 		my_sigma_ranges.clear();
 		while (my_sigma_ranges.empty() || my_sigma_ranges.size() % 2) {
-  		my_sigma_ranges = sigma_range_helper(this_sigma);
+			my_sigma_ranges = sigma_range_helper(this_sigma);
 		}
 		for (unsigned i=0;i < my_sigma_ranges.size(); i += 2) {
 		SigmaRange this_sigma_range = SigmaRange(my_sigma_ranges[i], my_sigma_ranges[i+1], this_sigma);
@@ -77,18 +77,22 @@ void CalDate::calculate_sigma_ranges() {
 	}
 }
 
-vector<int> CalDate::sigma_range_helper(double prob){
+vector<int> CalDate::sigma_range_helper(double &prob){
+	int nrun = 5000;
 	vector<double> prob_vector;
+	vector<double> cum_sum(_probabilities.size());
 
-	srand (time(NULL));
-	while (prob_vector.size()<5000) {
-		int random_index = rand() % _probabilities.size();
-		double this_rand = (double)rand()/(double)RAND_MAX;
-		if (_probabilities[random_index]>=this_rand)
-		{
-			prob_vector.push_back(_probabilities[random_index]);
-		}
-	}
+	std::partial_sum(_probabilities.begin(), _probabilities.end(), cum_sum.begin(), plus<double>());
+
+	double max=cum_sum.back();
+	for(int i = 0;
+	      i < nrun;
+	      ++i)
+	  {
+	      double linear = rand()*max/RAND_MAX;
+	      int up = upper_bound(cum_sum.begin(), cum_sum.end(), linear) - cum_sum.begin();
+	      prob_vector.push_back(_probabilities[up]);
+	  }
 
 	std::sort (prob_vector.begin(), prob_vector.end());
 

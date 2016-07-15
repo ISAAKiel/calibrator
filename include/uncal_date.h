@@ -32,15 +32,15 @@ class UncalDate{
     UncalDate(string name, int bp, int std);
     UncalDate();
 		void info()const;
-		CalDate calibrate(CalCurve calcurve);
+		CalDate calibrate(CalCurve &calcurve);
 	private:
 		string _name;
 		int _bp;
 		int _std;
-		vector<double> compute_probs(vector<int> error_cal_curve, vector<int> full_c14_bp);
+		vector<double> compute_probs(vector<int> &error_cal_curve, vector<int> &full_c14_bp);
 		double studentT( int df );
 		void generate_date_grid(std::vector<int>& full_bp, std::vector<int>& full_c14_bp, std::vector<int>& full_error, CalCurve& calcurve);
-		double LinearInterpolate(double y1, double y2, double mu);
+		int LinearInterpolateInt(int y1, int y2, double mu);
 };
 
 

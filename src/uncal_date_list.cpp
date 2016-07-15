@@ -16,7 +16,7 @@ void UncalDateList::push_back(UncalDate date){
 	_dates.push_back(date);
 };
 
-CalDateList UncalDateList::calibrate(CalCurve calcurve){
+CalDateList UncalDateList::calibrate(CalCurve &calcurve){
 	CalDateList my_cal_date_list;
 for (auto& element : _dates) {
 			CalDate my_cal_date = element.calibrate(calcurve);
