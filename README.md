@@ -19,4 +19,4 @@ Allowed arguments:
 
 ## Documentation
 
-See [doxygen docu](https://martinhinz.github.io/calibrator/).
+See [doxygen docu](https://isaakiel.github.io/calibrator/).
