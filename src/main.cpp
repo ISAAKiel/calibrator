@@ -59,10 +59,9 @@ int check_input_format(string &input_string) {
       return 1; //json
     } else if (first_char == '"' || first_char == '\'' || isalpha(first_char)) {
       return 2; //csv
-    } else {
-      return 0;
     } 
   }
+	return 0;
 }
 
 /** \brief Converts a csv input string to json.
@@ -78,7 +77,7 @@ json csv_input_to_json(string &in) {
     char first_char = in.front();
     if (isalpha(first_char)) head_length = 1;
     string line;
-    int counter = 0;
+    unsigned counter = 0;
     std::istringstream iss(in);
 
     while (getline(iss, line)) {
