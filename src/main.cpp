@@ -244,7 +244,7 @@ int main(int argc , char **argv) {
     }
 
     // Read the calibration curve
-    string filename = "data/intcal13.14c";
+    string filename = "../data/intcal13.14c";
     CalCurve my_cal_curve = CalCurve();
     my_cal_curve.import(filename);
 
