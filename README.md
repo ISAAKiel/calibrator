@@ -2,6 +2,8 @@
 
 # calibrator
 
+[![Project Status: Inactive – The project has reached a stable, usable state but is no longer being actively developed; support/maintenance will be provided as time allows.](https://www.repostatus.org/badges/latest/inactive.svg)](https://www.repostatus.org/#inactive)
+
 Calibrator is a small c++ command line tool to calibrate 14C dates. In can process inputs in csv, json or as cli parameters, and it outputs csv or json, that can be piped into a file.
 
 ## Usage
