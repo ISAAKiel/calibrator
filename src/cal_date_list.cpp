@@ -1,4 +1,5 @@
 #include "../include/cal_date_list.h"
+#include <sstream>
 
 CalDateList::CalDateList(vector<CalDate> dates):
 	_dates(dates)

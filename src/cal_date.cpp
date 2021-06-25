@@ -1,4 +1,5 @@
 #include "../include/cal_date.h"
+#include <sstream>
 
 CalDate::CalDate(string name, vector<double> probabilities, vector<int> bp, int uncal_bp, int uncal_error, vector<int> full_bp, vector<double> full_probabilities):
 	_name(name),
