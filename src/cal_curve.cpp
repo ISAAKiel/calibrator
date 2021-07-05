@@ -20,7 +20,11 @@ int CalCurve::import(string file) {
     c14_bp_.clear();
     error_.clear();
     ifstream in(file.c_str());
-    if (!in.is_open()) return 1;
+    if (!in.is_open()) {
+      printf("%s does not exist\n", file.c_str());
+      exit(EXIT_FAILURE);
+      return 1;
+    }
 
     vector< string > vec;
     string line;
