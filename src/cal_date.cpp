@@ -63,7 +63,7 @@ vector<double> CalDate::get_full_probabilities() {
 }
 
 void CalDate::calculate_sigma_ranges() {
-	static const double arr[] = {1 - 0.954,1 - 0.682};
+	static const double arr[] = {1 - 0.954};
 	vector<int> my_sigma_ranges;
 	for (unsigned t = 0; t < sizeof(arr)/sizeof(arr[0]); t++) {
 		double this_sigma = arr[t];
@@ -72,7 +72,7 @@ void CalDate::calculate_sigma_ranges() {
 			my_sigma_ranges = sigma_range_helper(this_sigma);
 		}
 		for (unsigned i=0;i < my_sigma_ranges.size(); i += 2) {
-		SigmaRange this_sigma_range = SigmaRange(my_sigma_ranges[i], my_sigma_ranges[i+1], this_sigma);
+		SigmaRange this_sigma_range = SigmaRange(my_sigma_ranges[i], my_sigma_ranges[i+1], 1-this_sigma);
 		_sigma_ranges.push_back(this_sigma_range);
 		}
 	}
