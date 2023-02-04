@@ -30,3 +30,4 @@
 docs/html/
 
 .project
+.DS_Store
