@@ -12,8 +12,8 @@ SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name "*.$(SRCEXT)")
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 CFLAGS := -O2 -g -Wall -std=c++26 -fmessage-length=0 
-LIB := -L ~/boost/lib  -lboost_program_options -lboost_system
-INC := -I ~/boost
+LIB := -L -lboost_program_options
+INC := -I include
 
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."
