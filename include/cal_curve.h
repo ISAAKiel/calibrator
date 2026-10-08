@@ -56,32 +56,55 @@ public:
      *
      * @return a vector<int> of standard deviation from the calibration curve
      */
-    vector<int> get_error();
+    const vector<int>& get_error() const;
     /**
      * @return a vector<int> of the bp values of the calibration curve
      */
-    vector<int> get_bp();
+    const vector<int>& get_bp() const;
     /**
      *
      * @return a vector<int> of the c14 bp values of the calibration curve
      */
-    vector<int> get_c14_bp();
+    const vector<int>& get_c14_bp() const;
     /**
      *
      * @return the number of rows of the calibration curve
      */
-    int rows();
+    int rows() const;
     /**
      *
      * @return the max bp value of the calibration curve
      */
-    int max_bp_cal_curve();
+    int max_bp_cal_curve() const;
     /**
      *
      * @return the min bp value of the calibration curve
      */
-    int min_bp_cal_curve();
+    int min_bp_cal_curve() const;
+    /**
+     * The calibration curve interpolated to a regular grid
+     * (descending from max_bp_cal_curve() in steps of grid_step).
+     */
+    struct Grid {
+        vector<int> bp;
+        vector<int> c14_bp;
+        vector<int> error;
+    };
+    /**
+     * Step width of the calibration grid in years.
+     */
+    static const int grid_step = 5;
+    /**
+     * Returns the interpolated calibration grid. It is computed once on
+     * first use and cached, since it is identical for every date.
+     * Not thread-safe on first call: call it once before calibrating in
+     * parallel.
+     */
+    const Grid& grid();
 private:
+    void build_grid();
+    Grid grid_;
+    bool grid_valid_ = false;
     /**
      * The calibrated bp values
      */

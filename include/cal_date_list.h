@@ -34,6 +34,8 @@ class CalDateList{
 		vector<CalDate> _dates;
     string to_csv();
     void sum();
+    /// Calculates the sigma ranges of all dates (in parallel).
+    void calculate_sigma_ranges();
 	private:
 
 };

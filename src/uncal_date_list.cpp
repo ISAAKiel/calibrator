@@ -1,4 +1,5 @@
 #include "../include/uncal_date_list.h"
+#include "../include/parallel.h"
 
 UncalDateList::UncalDateList(vector<UncalDate> dates):
 	_dates(dates)
@@ -13,14 +14,17 @@ vector<UncalDate> UncalDateList::get_dates(){
 };
 
 void UncalDateList::push_back(UncalDate date){
-	_dates.push_back(date);
+	_dates.push_back(std::move(date));
 };
 
 CalDateList UncalDateList::calibrate(CalCurve &calcurve){
-	CalDateList my_cal_date_list;
-for (auto& element : _dates) {
-			CalDate my_cal_date = element.calibrate(calcurve);
-			my_cal_date_list.push_back(my_cal_date);
-		}
-	return my_cal_date_list;
+	// Build (and cache) the interpolated calibration grid once,
+	// before any worker thread reads it.
+	const CalCurve::Grid &grid = calcurve.grid();
+
+	vector<CalDate> results(_dates.size());
+	parallel_for(_dates.size(), [&](size_t i) {
+		results[i] = _dates[i].calibrate(grid);
+	});
+	return CalDateList(std::move(results));
 };

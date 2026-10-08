@@ -22,7 +22,6 @@
 #include <iostream>
 #include "cal_date.h"
 #include "cal_curve.h"
-#include <boost/math/distributions/students_t.hpp>
 #include <numeric>
 
 using namespace std;
@@ -32,15 +31,18 @@ class UncalDate{
     UncalDate(string name, int bp, int std);
     UncalDate();
 		void info()const;
-		CalDate calibrate(CalCurve &calcurve);
+		/**
+		 * Calibrates the date. Only reads the (already built) grid of the
+		 * calibration curve, so it may be called concurrently once
+		 * calcurve.grid() has been called.
+		 */
+		CalDate calibrate(const CalCurve::Grid &grid) const;
+		CalDate calibrate(CalCurve &calcurve) const;
 	private:
 		string _name;
 		int _bp;
 		int _std;
-		vector<double> compute_probs(vector<int> &error_cal_curve, vector<int> &full_c14_bp);
-		double studentT( int df );
-		void generate_date_grid(std::vector<int>& full_bp, std::vector<int>& full_c14_bp, std::vector<int>& full_error, CalCurve& calcurve);
-		int LinearInterpolateInt(int y1, int y2, double mu);
+		vector<double> compute_probs(const vector<int> &error_cal_curve, const vector<int> &full_c14_bp) const;
 };
 
 
