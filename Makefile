@@ -11,19 +11,9 @@ TARGET := bin/calibrator
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name "*.$(SRCEXT)")
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CFLAGS := -O2 -g -Wall -std=c++26 -fmessage-length=0
-LIB := -lboost_program_options
+CFLAGS := -O3 -g -Wall -pthread -std=c++26 -fmessage-length=0
+LIB := -pthread
 INC := -I include
-
-# Optional prefix for Boost installations outside the system search paths.
-# For example, with Homebrew:
-#   make BOOST_PREFIX="$(brew --prefix boost)"
-BOOST_PREFIX ?=
-
-ifneq ($(BOOST_PREFIX),)
-INC += -I$(BOOST_PREFIX)/include
-LIB += -L$(BOOST_PREFIX)/lib
-endif
 
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."

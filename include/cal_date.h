@@ -42,6 +42,8 @@ public:
     std::string get_name();
     std::vector<int> get_full_bp() const;  // Marked as const
     std::vector<double> get_full_probabilities() const;  // Marked as const
+    const std::vector<int>& full_bp_ref() const { return _full_bp; }
+    const std::vector<double>& full_probabilities_ref() const { return _full_probabilities; }
     void calculate_sigma_ranges();
     std::vector<SigmaRange> get_sigma_ranges();
     json sigma_ranges_to_json();
