@@ -226,9 +226,11 @@ int main(int argc , char **argv) {
 
     // If output format is set to json, export a json string
     if (output_format == "json") {
-      std::cout << my_cal_date_list.to_json() << std::endl;
+      my_cal_date_list.write_json(std::cout);
+      std::cout << std::endl;
     } else if (output_format == "csv") {     // If output format is set to csv, export a csv string
-      std::cout << my_cal_date_list.to_csv() << std::endl;
+      my_cal_date_list.write_csv(std::cout);
+      std::cout << std::endl;
     } else {
       cout << "Invalid output format!";
       return EXIT_FAILURE;

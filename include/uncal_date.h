@@ -32,17 +32,19 @@ class UncalDate{
     UncalDate();
 		void info()const;
 		/**
-		 * Calibrates the date. Only reads the (already built) grid of the
-		 * calibration curve, so it may be called concurrently once
-		 * calcurve.grid() has been called.
+		 * Calibrates the date on a grid of `step` years, restricted to the
+		 * part of the curve within `k` combined standard deviations of the
+		 * 14C age. Only reads the curve, so it may be called concurrently.
+		 * Dates outside the calibration curve yield an empty result.
 		 */
-		CalDate calibrate(const CalCurve::Grid &grid) const;
-		CalDate calibrate(CalCurve &calcurve) const;
+		CalDate calibrate(const CalCurve &calcurve,
+		                  int step = CalCurve::default_step,
+		                  double k = 6.0) const;
 	private:
 		string _name;
 		int _bp;
 		int _std;
-		vector<double> compute_probs(const vector<int> &error_cal_curve, const vector<int> &full_c14_bp) const;
+		vector<double> compute_probs(const vector<double> &error_cal_curve, const vector<double> &c14_bp, int step) const;
 };
 
 

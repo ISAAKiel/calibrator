@@ -18,13 +18,9 @@ void UncalDateList::push_back(UncalDate date){
 };
 
 CalDateList UncalDateList::calibrate(CalCurve &calcurve){
-	// Build (and cache) the interpolated calibration grid once,
-	// before any worker thread reads it.
-	const CalCurve::Grid &grid = calcurve.grid();
-
 	vector<CalDate> results(_dates.size());
 	parallel_for(_dates.size(), [&](size_t i) {
-		results[i] = _dates[i].calibrate(grid);
+		results[i] = _dates[i].calibrate(calcurve);
 	});
 	return CalDateList(std::move(results));
 };

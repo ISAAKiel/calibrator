@@ -1,10 +1,8 @@
 #include "../include/cal_date_list.h"
 #include <sstream>
 #include "../include/parallel.h"
-#include <set>
-#include <map>
-#include <numeric>
 #include <algorithm>
+#include <map>
 
 
 CalDateList::CalDateList(vector<CalDate> dates):
@@ -25,101 +23,101 @@ void CalDateList::push_back(CalDate date){
 
 json CalDateList::to_json(){
 	json return_value;
-	int i = 0;
 	for (auto& element : _dates) {
-			json this_date;
-			string this_name = element.get_name();
-			return_value[this_name] = element.to_json();
-			i++;
+			return_value[element.get_name()] = element.to_json();
 	}
-	return return_value;	
+	return return_value;
+}
+
+std::vector<std::string> CalDateList::json_parts(){
+	// Like a json object (std::map): keys sorted, the last date wins if
+	// two dates have the same name.
+	std::map<std::string, size_t> by_name;
+	for (size_t i = 0; i < _dates.size(); i++) by_name[_dates[i].get_name()] = i;
+	std::vector<size_t> order;
+	for (auto& kv : by_name) order.push_back(kv.second);
+	std::vector<std::string> parts(order.size());
+	parallel_for(order.size(), [&](size_t k) {
+		CalDate& d = _dates[order[k]];
+		parts[k] = json(d.get_name()).dump() + ":" + d.to_json().dump();
+	});
+	return parts;
+}
+
+void CalDateList::write_json(std::ostream& os){
+	// Same result as os << to_json(), but each date is serialised in
+	// parallel and the full document is never held as a json tree.
+	std::vector<std::string> parts = json_parts();
+	if (parts.empty()) { os << json(); return; }  // "null"
+	os << '{';
+	for (size_t k = 0; k < parts.size(); k++) {
+		if (k) os << ',';
+		os << parts[k];
+		std::string().swap(parts[k]);  // free as we go
+	}
+	os << '}';
+}
+
+std::string CalDateList::to_json_string(){
+	std::ostringstream ss;
+	write_json(ss);
+	return ss.str();
+}
+
+std::vector<std::string> CalDateList::csv_parts(){
+	std::vector<std::string> parts(_dates.size());
+	parallel_for(_dates.size(), [&](size_t i) { parts[i] = _dates[i].to_csv(); });
+	return parts;
+}
+
+void CalDateList::write_csv(std::ostream& os){
+	std::vector<std::string> parts = csv_parts();
+	os << "name,bp,probability\n";
+	for (auto& p : parts) { os << p; std::string().swap(p); }
 }
 
 string CalDateList::to_csv(){
-  std::stringstream ss;
-	ss << "name,bp,probability\n";
-	for (auto& element : _dates) {
-		ss << element.to_csv();
-	}
-  std::string return_value = ss.str();
-	return return_value;	
+	std::ostringstream ss;
+	write_csv(ss);
+	return ss.str();
 }
 
 void CalDateList::sum() {
     if (_dates.empty()) return;  // Early return if _dates is empty
-    {
-        const std::vector<int>& ref_bp = _dates.front().full_bp_ref();
-        bool same_grid = !ref_bp.empty();
-        for (const auto& element : _dates) {
-            if (element.full_bp_ref() != ref_bp) { same_grid = false; break; }
-        }
-        if (same_grid) {
-            std::vector<double> acc(ref_bp.size(), 0.0);
-            for (const auto& element : _dates) {
-                const std::vector<double>& probs = element.full_probabilities_ref();
-                for (size_t i = 0; i < acc.size(); ++i) acc[i] += probs[i];
-            }
-            // output in ascending bp order, as the map-based version does
-            std::vector<int> filtered_bp;
-            std::vector<double> filtered_probs;
-            std::vector<size_t> order(ref_bp.size());
-            std::iota(order.begin(), order.end(), 0);
-            std::sort(order.begin(), order.end(),
-                      [&](size_t a, size_t b) { return ref_bp[a] < ref_bp[b]; });
-            for (size_t k : order) {
-                if (acc[k] >= 1e-5) {
-                    filtered_bp.push_back(ref_bp[k]);
-                    filtered_probs.push_back(acc[k]);
-                }
-            }
-            if (!filtered_probs.empty()) {
-                _dates.push_back(CalDate("sum", filtered_probs, filtered_bp, 0, 0, filtered_bp, filtered_probs));
-            } else {
-                std::cerr << "Filtered probs or full_bp is empty" << std::endl;
-            }
-            return;
-        }
-    }
 
-    // Determine the full range of years (bp)
-    std::set<int> all_bps;
+    // Range of calendar years covered by any date
+    int min_bp = 0, max_bp = -1;
+    bool any = false;
     for (const auto& element : _dates) {
         const std::vector<int>& bps = element.full_bp_ref();
-        all_bps.insert(bps.begin(), bps.end());
+        if (bps.empty()) continue;
+        auto mm = std::minmax_element(bps.begin(), bps.end());
+        if (!any || *mm.first < min_bp) min_bp = *mm.first;
+        if (!any || *mm.second > max_bp) max_bp = *mm.second;
+        any = true;
     }
 
-    // Create a unified map for probabilities
-    std::map<int, double> unified_probs;
-    for (int bp : all_bps) {
-        unified_probs[bp] = 0.0;
-    }
-
-    // Accumulate probabilities for each year (bp)
+    // Accumulate the probabilities year by year in a dense array
+    std::vector<double> acc(any ? (size_t)(max_bp - min_bp + 1) : 0, 0.0);
     for (const auto& element : _dates) {
-        const std::vector<int>& bps = element.full_bp_ref(); const std::vector<double>& probs = element.get_full_probabilities();
-        
-
-        for (size_t i = 0; i < bps.size(); ++i) {
-            int bp = bps[i];
-            double prob = probs[i];
-            unified_probs[bp] += prob;
-        }
+        const std::vector<int>& bps = element.full_bp_ref();
+        const std::vector<double>& probs = element.full_probabilities_ref();
+        for (size_t i = 0; i < bps.size(); ++i)
+            acc[bps[i] - min_bp] += probs[i];
     }
 
-    // Filter out probabilities smaller than 1e-5 and collect final base pairs and probabilities
+    // Filter out probabilities smaller than 1e-5 (ascending bp order)
     std::vector<int> filtered_bp;
     std::vector<double> filtered_probs;
-    for (const auto& entry : unified_probs) {
-        if (entry.second >= 1e-5) {
-            filtered_bp.push_back(entry.first);
-            filtered_probs.push_back(entry.second);
+    for (size_t i = 0; i < acc.size(); ++i) {
+        if (acc[i] >= 1e-5) {
+            filtered_bp.push_back(min_bp + (int)i);
+            filtered_probs.push_back(acc[i]);
         }
     }
 
-    // Verify if filtered_probs and filtered_bp are not empty before creating sum_date
-    if (!filtered_probs.empty() && !filtered_bp.empty()) {
-        CalDate sum_date = CalDate("sum", filtered_probs, filtered_bp, 0, 0, filtered_bp, filtered_probs);
-        _dates.push_back(sum_date);
+    if (!filtered_probs.empty()) {
+        _dates.push_back(CalDate("sum", filtered_probs, filtered_bp, 0, 0, filtered_bp, filtered_probs));
     } else {
         std::cerr << "Filtered probs or full_bp is empty" << std::endl;
     }

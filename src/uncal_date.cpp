@@ -19,12 +19,14 @@ void UncalDate::info()const{
 	std::cout << std::endl;
 };
 
-CalDate UncalDate::calibrate(CalCurve &calcurve) const {
-	return calibrate(calcurve.grid());
-}
+CalDate UncalDate::calibrate(const CalCurve &calcurve, int step, double k) const {
+	vector<int> bp;
+	vector<double> c14, err;
+	int lo, hi;
+	if (calcurve.relevant_range(_bp, _std, k, step, lo, hi))
+		calcurve.sample(hi, lo, step, bp, c14, err);
 
-CalDate UncalDate::calibrate(const CalCurve::Grid &grid) const {
-	vector<double> probs = compute_probs(grid.error, grid.c14_bp);
+	vector<double> probs = compute_probs(err, c14, step);
 	vector<double> probs_return;
 	vector<int> bp_return;
 	for (size_t i = 0; i < probs.size(); i++)
@@ -32,14 +34,14 @@ CalDate UncalDate::calibrate(const CalCurve::Grid &grid) const {
 		if (probs[i] > 1.0e-05)
 		{
 			probs_return.push_back(probs[i]);
-			bp_return.push_back(grid.bp[i]);
+			bp_return.push_back(bp[i]);
 		}
 	}
 
-	return CalDate(_name, std::move(probs_return), std::move(bp_return), _bp, _std, grid.bp, std::move(probs));
+	return CalDate(_name, std::move(probs_return), std::move(bp_return), _bp, _std, std::move(bp), std::move(probs));
 };
 
-vector<double> UncalDate::compute_probs(const vector<int> &error_cal_curve, const vector<int> &full_c14_bp) const {
+vector<double> UncalDate::compute_probs(const vector<double> &error_cal_curve, const vector<double> &full_c14_bp, int step) const {
 	const double df = 100.0;
 	const double expo = -(df + 1.0) / 2.0;
 	const size_t n = error_cal_curve.size();
@@ -55,7 +57,9 @@ vector<double> UncalDate::compute_probs(const vector<int> &error_cal_curve, cons
 		prob_return_value[t] = this_prob;
 		prob_sum += this_prob;
 	}
-	const double norm = 1.0 / (prob_sum * 5); // norm to 1
+	if (prob_sum <= 0) return prob_return_value;
+	// density per calendar year (sums to 1 over the grid)
+	const double norm = 1.0 / (prob_sum * step);
 	for (double& f : prob_return_value) f *= norm;
 	return prob_return_value;
 }

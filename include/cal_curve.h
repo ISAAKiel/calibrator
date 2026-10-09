@@ -26,6 +26,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -82,29 +83,33 @@ public:
      */
     int min_bp_cal_curve() const;
     /**
-     * The calibration curve interpolated to a regular grid
-     * (descending from max_bp_cal_curve() in steps of grid_step).
+     * Default resolution of calibrated dates in years.
      */
-    struct Grid {
-        vector<int> bp;
-        vector<int> c14_bp;
-        vector<int> error;
-    };
+    static const int default_step = 1;
+
     /**
-     * Step width of the calibration grid in years.
+     * Determines the part of the calibration curve that is relevant for a
+     * 14C age: all curve nodes whose 14C age lies within k combined
+     * standard deviations (sqrt(sigma^2 + curve_error^2)), widened by one
+     * neighbouring node on each side and aligned to multiples of step.
+     *
+     * @return false if no node is within that distance (the date lies
+     *         outside the calibration curve)
      */
-    static const int grid_step = 5;
+    bool relevant_range(double c14_age, double sigma, double k, int step,
+                        int &lo, int &hi) const;
+
     /**
-     * Returns the interpolated calibration grid. It is computed once on
-     * first use and cached, since it is identical for every date.
-     * Not thread-safe on first call: call it once before calibrating in
-     * parallel.
+     * Linearly interpolates the curve at cal BP hi, hi - step, ..., lo.
      */
-    const Grid& grid();
+    void sample(int hi, int lo, int step, vector<int> &cal_bp,
+                vector<double> &c14_bp, vector<double> &error) const;
 private:
-    void build_grid();
-    Grid grid_;
-    bool grid_valid_ = false;
+    void build_ascending();
+    // ascending copies of the curve, built on import
+    vector<int> asc_cal_;
+    vector<double> asc_c14_;
+    vector<double> asc_err_;
     /**
      * The calibrated bp values
      */

@@ -6,7 +6,7 @@ CalCurve::CalCurve(vector<int> cal_bp, vector<int> c14_bp, vector<int> error):
      cal_bp_(std::move(cal_bp)),
      c14_bp_(std::move(c14_bp)),
      error_(std::move(error))
-     {}
+     { build_ascending(); }
 CalCurve::CalCurve() : cal_bp_(), c14_bp_(), error_()
      {}
 
@@ -21,7 +21,6 @@ int CalCurve::import(string file) {
     cal_bp_.clear();
     c14_bp_.clear();
     error_.clear();
-    grid_valid_ = false;
     ifstream in(file.c_str());
     if (!in.is_open()) {
       printf("%s does not exist\n", file.c_str());
@@ -50,6 +49,7 @@ int CalCurve::import(string file) {
         }
         counter++;
     }
+  build_ascending();
   return EXIT_SUCCESS;
 }
 
@@ -73,47 +73,68 @@ const vector<int>& CalCurve::get_c14_bp() const {
   return c14_bp_;
 }
 
-const CalCurve::Grid& CalCurve::grid() {
-  if (!grid_valid_) build_grid();
-  return grid_;
-}
-
-static int linear_interpolate_int(int y1, int y2, double mu) {
-  return (int)round(y1 * (1 - mu) + y2 * mu);
-}
-
-void CalCurve::build_grid() {
-  const int max_bp = max_bp_cal_curve();
-  const int num_elements = round((max_bp - min_bp_cal_curve()) / grid_step);
-
-  // Ascending copies of the curve for binary search.
-  vector<int> asc_bp(cal_bp_.rbegin(), cal_bp_.rend());
-  vector<int> asc_c14(c14_bp_.rbegin(), c14_bp_.rend());
-  vector<int> asc_err(error_.rbegin(), error_.rend());
-
-  grid_.bp.assign(num_elements, 0);
-  grid_.c14_bp.assign(num_elements, 0);
-  grid_.error.assign(num_elements, 0);
-
-  for (int i = 0; i < num_elements; i++) {
-    const int this_bp = max_bp - i * grid_step;
-    auto it = std::lower_bound(asc_bp.begin(), asc_bp.end(), this_bp);
-    const size_t pos = it - asc_bp.begin();
-    int this_c14, this_error;
-    if (it != asc_bp.end() && *it == this_bp) {
-      // exact hit on a curve node
-      this_c14 = asc_c14[pos];
-      this_error = asc_err[pos];
-    } else {
-      // linear interpolation between neighbouring nodes
-      const int upper_bp = asc_bp[pos], lower_bp = asc_bp[pos - 1];
-      const double mu = (double)(this_bp - lower_bp) / (double)(upper_bp - lower_bp);
-      this_c14 = linear_interpolate_int(asc_c14[pos - 1], asc_c14[pos], mu);
-      this_error = linear_interpolate_int(asc_err[pos - 1], asc_err[pos], mu);
-    }
-    grid_.bp[i] = this_bp;
-    grid_.c14_bp[i] = this_c14;
-    grid_.error[i] = this_error;
+void CalCurve::build_ascending() {
+  vector<size_t> order(cal_bp_.size());
+  for (size_t i = 0; i < order.size(); i++) order[i] = i;
+  std::sort(order.begin(), order.end(),
+            [&](size_t a, size_t b) { return cal_bp_[a] < cal_bp_[b]; });
+  asc_cal_.clear(); asc_c14_.clear(); asc_err_.clear();
+  for (size_t i : order) {
+    asc_cal_.push_back(cal_bp_[i]);
+    asc_c14_.push_back(c14_bp_[i]);
+    asc_err_.push_back(error_[i]);
   }
-  grid_valid_ = true;
+}
+
+static int floor_to(int x, int step) {
+  int r = x % step;
+  return r < 0 ? x - r - step : x - r;
+}
+
+bool CalCurve::relevant_range(double c14_age, double sigma, double k, int step,
+                              int &lo, int &hi) const {
+  const size_t n = asc_cal_.size();
+  const double sigma2 = sigma * sigma;
+  size_t first = n, last = 0;
+  for (size_t i = 0; i < n; i++) {
+    const double d = c14_age - asc_c14_[i];
+    const double limit2 = k * k * (sigma2 + asc_err_[i] * asc_err_[i]);
+    if (d * d < limit2) {
+      if (first == n) first = i;
+      last = i;
+    }
+  }
+  if (first == n) return false;
+  // include the neighbouring nodes: the interpolated curve between them
+  // and the first/last relevant node may still be relevant
+  if (first > 0) first--;
+  if (last + 1 < n) last++;
+  lo = -floor_to(-asc_cal_[first], step);  // ceil to multiple of step
+  hi = floor_to(asc_cal_[last], step);
+  return lo <= hi;
+}
+
+void CalCurve::sample(int hi, int lo, int step, vector<int> &cal_bp,
+                      vector<double> &c14_bp, vector<double> &error) const {
+  const size_t count = hi >= lo ? (size_t)((hi - lo) / step + 1) : 0;
+  cal_bp.resize(count);
+  c14_bp.resize(count);
+  error.resize(count);
+  if (count == 0) return;
+  // index of the first node >= hi; walk downwards from there
+  size_t j = std::lower_bound(asc_cal_.begin(), asc_cal_.end(), hi) - asc_cal_.begin();
+  for (size_t t = 0; t < count; t++) {
+    const int x = hi - (int)t * step;
+    while (j > 0 && asc_cal_[j - 1] >= x) j--;
+    // now asc_cal_[j] >= x > asc_cal_[j-1] (or j == 0)
+    if (asc_cal_[j] == x || j == 0) {
+      c14_bp[t] = asc_c14_[j];
+      error[t] = asc_err_[j];
+    } else {
+      const double mu = (double)(x - asc_cal_[j - 1]) / (asc_cal_[j] - asc_cal_[j - 1]);
+      c14_bp[t] = asc_c14_[j - 1] + (asc_c14_[j] - asc_c14_[j - 1]) * mu;
+      error[t] = asc_err_[j - 1] + (asc_err_[j] - asc_err_[j - 1]) * mu;
+    }
+    cal_bp[t] = x;
+  }
 }

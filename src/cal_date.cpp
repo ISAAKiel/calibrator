@@ -3,6 +3,7 @@
 #include <functional>
 #include <iterator>
 #include <cstdlib>
+#include <cstdio>
 #include <numeric>
 #include <algorithm>
 #include <cmath>  // For floor(), round()
@@ -140,10 +141,15 @@ json CalDate::sigma_ranges_to_json() {
 }
 
 std::string CalDate::to_csv() {
-    std::stringstream ss;
-    for (unsigned i = 0; i < _bp.size(); ++i) {
-        ss << _name << "," << _bp[i] << "," << _probabilities[i] << "\n";
+    // snprintf("%g") formats exactly like the default std::ostream
+    // (precision 6), but is considerably faster.
+    std::string out;
+    out.reserve(_bp.size() * (_name.size() + 24));
+    char buf[64];
+    for (size_t i = 0; i < _bp.size(); ++i) {
+        int len = snprintf(buf, sizeof(buf), ",%d,%g\n", _bp[i], _probabilities[i]);
+        out += _name;
+        out.append(buf, len);
     }
-    std::string return_value = ss.str();
-    return return_value;
+    return out;
 }

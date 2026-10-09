@@ -21,6 +21,8 @@
 
 #include "cal_date.h"
 #include <vector>
+#include <string>
+#include <ostream>
 
 using namespace std;
 
@@ -31,12 +33,19 @@ class CalDateList{
 		vector<CalDate> get_dates();
 		void push_back(CalDate date);
 		json to_json();
+		/// Same as to_json().dump(), but faster and with less memory.
+		std::string to_json_string();
+		/// Write to_json().dump() / to_csv() directly to a stream.
+		void write_json(std::ostream& os);
+		void write_csv(std::ostream& os);
 		vector<CalDate> _dates;
     string to_csv();
     void sum();
     /// Calculates the sigma ranges of all dates (in parallel).
     void calculate_sigma_ranges();
 	private:
+		std::vector<std::string> json_parts();
+		std::vector<std::string> csv_parts();
 
 };
 
