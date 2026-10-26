@@ -15,11 +15,7 @@ that can be piped into a file.
 #include "../include/uncal_date_list.h"
 #include "../include/cal_date_list.h"
 
-// Include the headers relevant to the boost::program_options
-// library
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
+#include "../include/cli_options.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -27,8 +23,6 @@ that can be piped into a file.
 #include <istream> 
 #include <cctype> 
 
-using namespace boost;
-using namespace boost::program_options;
 
 /** \brief Method to validate that a string contains numbers only.
   * \param a A string
@@ -131,54 +125,24 @@ int main(int argc , char **argv) {
   json j;
 
   /*
-   * Defines the cli input parameters via boost.
+   * Parse the cli input parameters.
    */
-
-  options_description desc(
-    "\nA tool for 14C calibration from the command line.\n\nAllowed arguments");
-
-  desc.add_options()
-    ("help,h", "Produce this help message.")
-    ("input-file,i", value< vector<string> >(),
-     "Specifies input file.")
-    ("bp,b", value< vector<int> >(),
-     "The BP Value.")
-    ("std,s", value< vector<int> >(),
-     "The standard deviation.")
-    ("json-string,j", value< vector<string> >(),
-     "Input as as JSON string. Format: {\"bp\": xx, \"std\": xx}")
-    ("ranges,r", "calculate sigma ranges (only for json output).")
-	("sum", "calculate sum probability.")
-    ("output,o", value<string>()->default_value("json"), 
-     "csv for csv-output, json for json (default).");
-
-    positional_options_description p;
-    p.add("input-file", -1);
-
-    // Map the input parameters
-    variables_map vm;
-
-    // Parse the input parameters
-    try {
-        store(command_line_parser(
-        argc, argv).options(desc).positional(p).run(), vm);
-        notify(vm);
-    } catch (std::exception &e) {
-        cout << endl << e.what() << endl;
-        cout << desc << endl;
-    }
+  CliOptions opts = parse_cli_options(argc, argv);
+  if (!opts.error.empty()) {
+    cout << endl << opts.error << endl;
+    cout << CLI_HELP_TEXT << endl;
+  }
 
     // Display help text when requested
-    if (vm.count("help")) {
+    if (opts.help) {
         cout << "–help specified" << endl;
-        cout << desc << endl;
+        cout << CLI_HELP_TEXT << endl;
         return EXIT_SUCCESS;
     }
 
     // Handles input files
-    if (vm.count("input-file")) {
-        vector<string> inputFilename =
-            vm["input-file"].as< vector<string> >();
+    if (opts.input_file.present) {
+        const vector<string>& inputFilename = opts.input_file.values;
 
         string line;
         string file_content;
@@ -206,33 +170,30 @@ int main(int argc , char **argv) {
     }
 
     // Handles json strings
-    if (vm.count("json-string")) {
-        vector<string>  json_string =
-            vm["json-string"].as< vector<string> >();
-        j = json::parse(json_string[0]);
+    if (opts.json_string.present) {
+        j = json::parse(opts.json_string.values[0]);
     }
 
-    // Handles output format parameter
-    string output_format =
-            vm["output"].as<string>();
+    // Handles output format parameter. Without a value (only possible
+    // after a parse error) boost::program_options used to abort here.
+    if (!opts.has_output) {
+      return EXIT_FAILURE;
+    }
+    string output_format = opts.output;
 
     // Handles bp and std as cli parameters
-    if (vm.count("bp") && vm.count("std")) {
+    if (opts.bp.present && opts.std.present) {
+        if (opts.bp.values.empty() || opts.std.values.empty()) {
+          return EXIT_FAILURE; // invalid value, see above
+        }
         json j_temp;
-        vector<int> bp =
-            vm["bp"].as< vector<int> >();
-        vector<int> std =
-            vm["std"].as< vector<int> >();
-        j_temp["bp"] = bp[0];
-        j_temp["std"] = std[0];
+        j_temp["bp"] = opts.bp.values[0];
+        j_temp["std"] = opts.std.values[0];
         j["date"] = j_temp;
     }
 
     // Should the sigma ranges be calculated?
-    bool calc_sigma_ranges = false;
-    if (vm.count("ranges")) {
-      calc_sigma_ranges = true;
-    }
+    bool calc_sigma_ranges = opts.ranges;
 
     // Instantize an uncalibrated date an a list for uncalibrated dates
     UncalDate my_date;
@@ -253,23 +214,23 @@ int main(int argc , char **argv) {
     CalDateList my_cal_date_list = my_date_list.calibrate(my_cal_curve);
 
     // If requested calculate the sum probability
-    if (vm.count("sum")) {
+    if (opts.sum) {
     my_cal_date_list.sum();
     }
 
     // If requested, and output format is not csv, 
     // calculate the sigma ranges
     if (calc_sigma_ranges && output_format != "csv") {
-      for (auto &this_date : my_cal_date_list._dates) {
-        this_date.calculate_sigma_ranges();
-      }
+      my_cal_date_list.calculate_sigma_ranges();
     }
 
     // If output format is set to json, export a json string
     if (output_format == "json") {
-      std::cout << my_cal_date_list.to_json() << std::endl;
+      my_cal_date_list.write_json(std::cout);
+      std::cout << std::endl;
     } else if (output_format == "csv") {     // If output format is set to csv, export a csv string
-      std::cout << my_cal_date_list.to_csv() << std::endl;
+      my_cal_date_list.write_csv(std::cout);
+      std::cout << std::endl;
     } else {
       cout << "Invalid output format!";
       return EXIT_FAILURE;
