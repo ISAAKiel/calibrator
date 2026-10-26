@@ -11,7 +11,7 @@ TARGET := bin/calibrator
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name "*.$(SRCEXT)")
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CFLAGS := -O3 -g -Wall -pthread -std=c++26 -fmessage-length=0
+CFLAGS := -O3 -g -Wall -pthread -fmessage-length=0
 LIB := -pthread
 INC := -I include
 
